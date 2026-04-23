@@ -1,0 +1,12 @@
+include ../MakeFile.in
+
+F90FILES = adi_3D_solvr.f90
+
+OFILES = $(F90FILES:.f90=.o)
+MODFILES = $(F90FILES:.f90=.mod)
+EXEFILES = $(F90FILES:.f90=)
+
+
+make:
+	gfortran -J$(MODDIR) -c $(F90FILES) -o $(OBJDIR)/$(OFILES) 
+       

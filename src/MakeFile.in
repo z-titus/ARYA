@@ -1,0 +1,6 @@
+# Directories
+HOMEPATH = /home/zach_t/me6313/ARYA
+MODDIR = $(HOMEPATH)/mod
+OBJDIR = $(HOMEPATH)/obj
+BINDIR = $(HOMEPATH)/bin
+SRCDIR = $(HOMEPATH)/src
