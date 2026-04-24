@@ -3,7 +3,7 @@ PROGRAM MAIN
     USE U_MOMENTUM_SLVR
     USE V_MOMENTUM_SLVR
     USE W_MOMENTUM_SLVR
-    USE PRESS_CRCT_SLVR
+    USE PRESS_CRCTR_SLVR
     USE CRCTR_CVG
     USE READ_INPUT
     USE WRITE_OUTPUT
@@ -35,11 +35,19 @@ PROGRAM MAIN
     REAL(dp), ALLOCATABLE, DIMENSION(:)      :: res_temp_p, res_temp_vel  ! reusable array to store residuals ine each ADI call
 
     ! unsteady stuff
-    INTEGER     :: n_iter
+    INTEGER     :: n_iter_time
     REAL(dp)    :: t, dt ! current time and time step
 
     ! grid stuff
     INTEGER         :: Nx, Ny, Nz
+    REAL(dp)        :: Lx, Ly, Lz
+    REAL(dp)        :: del_x, del_y, del_z
+
+    ! flow properties
+    REAL(dp)    :: Re, rho, visc
+
+    ! relaxation factors
+    REAL(dp)    :: relax_p, relax_vel
 
     ! Declare coefficient matrices for each grid
     REAL(dp), DIMENSION(:,:,:)   , AllOCATABLE   :: aP_ndl, aN_ndl, aE_ndl, & 
@@ -72,7 +80,12 @@ PROGRAM MAIN
 
     ! residuals
     REAL(dp), ALLOCATABLE, DIMENSION(:)      :: res      ! residual for each iteration
-    !REAL(dp), ALLOCATABLE, DIMENSION(:,:,:)  :: phi_old 
+
+    REAL(dp)    :: cnty_ref, cnty_tol
+    LOGICAL     :: cnvrged
+
+    !output
+    CHARACTER(:), ALLOCATABLE  :: out_file_u, out_file_v, out_file_w
 
     
     CALL GET_COMMAND_ARGUMENT(1, in_file)   ! Recieve an input file from command line
@@ -80,31 +93,39 @@ PROGRAM MAIN
 
     ! PRELIMINARIES
     !unpack parameters needed in main
-    Nx =    params
-    Ny =    params   
-    Nz =    params
-    Lx =    params
-    Ly =    params   
-    Lz =    params
+    Nx =    params(1)
+    Ny =    params(2)  
+    Nz =    params(3)
+    Lx =    params(4)
+    Ly =    params(5) 
+    Lz =    params(6)
 
-    max_it_ADI_vel = params
-    max_it_ADI_p   = params
-    max_it_main    = params
+    del_x = Lx/Nx
+    del_y = Ly/Ny
+    del_z = Lz/Nz
 
-    res_tol_vel  = params
-    res_tol_p    = params
-    res_tol_main = params
+    dt = params(7)
 
-    n_iter      = params
-    dt          = params
+    Re = params(8)
 
-    n_iter_simple = 5
+    rho         = params(10)
+    visc        = params(12)
 
-    relax_vel = 0.8 ! relaxation factors
-    relax_p = 0.4
+    max_it_ADI_vel = params(25)
+    max_it_ADI_p   = params(26)
+
+    res_tol_vel    = params(27)
+    res_tol_p      = params(28)
+
+    n_iter_time    = params(29)
+    n_iter_simple  = params(30)
+    cnty_tol       = params(31)
+
+    relax_vel      = params(32)
+    relax_p        = params(33)
 
     ! boundary conditions 
-    BC_N_u      = 1
+    BC_N_u      = (Re*visc)/(Ly*rho)
     BC_E_u      = 0
     BC_S_u      = 0
     BC_W_u      = 0
@@ -164,6 +185,9 @@ PROGRAM MAIN
     ALLOCATE(v_star(Ny+1,Nx,Nz))
     ALLOCATE(w_star(Ny,Nx,Nz+1))
 
+    ! pressure correction
+    ALLOCATE(p_prime(Ny,Nx,Nz))
+
     ! Actual values
     ALLOCATE(p(Ny,Nx,Nz))
     ALLOCATE(u(Ny,Nx+1,Nz))
@@ -175,12 +199,17 @@ PROGRAM MAIN
     ALLOCATE(d_v(Ny+1,Nx,Nz))
     ALLOCATE(d_w(Ny,Nx,Nz+1))
 
+    ALLOCATE(b3D_prime(Ny,Nx,Nz))
+    ALLOCATE(b3D_u(Ny,Nx+1,Nz))
+    ALLOCATE(b3D_v(Ny+1,Nx,Nz))
+    ALLOCATE(b3D_w(Ny,Nx,Nz+1))
+
     ALLOCATE(res_temp_p(max_it_ADI_p+1))
     ALLOCATE(res_temp_vel(max_it_ADI_vel+1))
 
     ! Apply appropriate boundary conditons to u_star to initialize
     DO i = 1,Ny
-        DO j = 1,Nx_stg ! start from the second column on the staggered grid for u
+        DO j = 1,(Nx+1) ! start from the second column on the staggered grid for u
             DO k = 1,Nz
 
                 IF (i==Ny) THEN
@@ -194,9 +223,9 @@ PROGRAM MAIN
     END DO
 
     ! initialize everything else to zero
-    v = 0.0
-    w = 0.0
-    p = 0.0
+    v = 0.01
+    w = 0.01
+    p = 0.01
     t = 0
 
     ! Main routine
@@ -230,7 +259,7 @@ PROGRAM MAIN
                                     BC_N_w, BC_E_w, BC_S_w, BC_W_w, BC_T_w, BC_B_w, &
                                     d_w, &
                                     res_tol_vel, max_it_ADI_vel)
-
+            
             !solve pressure correction equations
             CALL PRESS_CRCTR_SLVR_MAIN(Nx, Ny, Nz, params, del_x, del_y, del_z, &
                                         p_prime, u_star, v_star, w_star, & 
@@ -239,16 +268,16 @@ PROGRAM MAIN
                                         b3D_prime, &
                                         res_tol_p, max_it_ADI_p)
 
-
             !correct pressure and velocity
-            CALL CORRECTER(p, u, v, w, p_star, p_prime, u_star, v_star, w_star, d_u, d_v, d_w, &
-                           relax_vel, relax_p)
+            CALL CORRECTER(Nx, Ny, Nz, p, u, v, w, p_star, p_prime, u_star, v_star, w_star, d_u, d_v, d_w, &
+                             relax_vel, relax_p)
+            
         END DO
 
         !check if b term is convered
-        CALL CONTINUITY_CVG(Nx, Ny, Nz, b3D_prime, main_it, cnty_tol, cnty_ref, cnvrged)
+        CALL CONTINUITY_CVG(Nx, Ny, Nz, b3D_prime, i, cnty_tol, cnty_ref, cnvrged)
 
-        IF (cnvrged == .TRUE.) THEN
+        IF (cnvrged) THEN
             PRINT *, 'SIMPLE algorithm converged on main iteration ', i
             EXIT
         END IF
@@ -258,7 +287,11 @@ PROGRAM MAIN
     END DO
 
     ! write out each velocity component
-    IF (cnvrged == .TRUE.) THEN
+    IF (cnvrged) THEN
+        out_file_u = TRIM(out_file) // 'u'
+        out_file_v = TRIM(out_file) // 'v'
+        out_file_w = TRIM(out_file) // 'w'
+        
         CALL WRITE3D_OUTPUT_MAIN(BC_N_u, BC_E_u, BC_S_u, BC_W_u, BC_B_u, BC_T_u, u(:,2:Nx,:), out_file_u)
         CALL WRITE3D_OUTPUT_MAIN(BC_N_v, BC_E_v, BC_S_v, BC_W_v, BC_B_v, BC_T_v, v(2:Ny,:,:), out_file_v)
         CALL WRITE3D_OUTPUT_MAIN(BC_N_w, BC_E_w, BC_S_w, BC_W_w, BC_B_w, BC_T_w, w(:,:,2:Nz), out_file_w)

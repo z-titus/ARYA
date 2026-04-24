@@ -15,14 +15,35 @@ MODULE PRESS_CRCTR_SLVR
                                         b3D_prime, &
                                         res_tol_p, max_it_ADI_p)
 
+            INTEGER, PARAMETER  :: dp = KIND(1.0D0)
+
+            ! inputs
+            INTEGER,  INTENT(IN)     :: Nx, Ny, Nz
+
+            REAL(dp), DIMENSION(:),     ALLOCATABLE, INTENT(IN)   :: params
+
+            REAL(dp), DIMENSION(:,:,:), INTENT(IN)     :: u_star, v_star, w_star ! velocity correction values
+            REAL(dp), DIMENSION(:,:,:), INTENT(INOUT)  :: p_prime ! pressure correction values
+            REAL(dp), DIMENSION(:,:,:), INTENT(IN)     :: d_u, d_v, d_w
+
+            REAL(dp), INTENT(IN)    :: del_x, del_y, del_z
+
+            REAL(dp), DIMENSION(:,:,:)   , INTENT(INOUT)     :: aP_ndl, aN_ndl, aE_ndl, aS_ndl, aW_ndl, aB_ndl, aT_ndl
+            REAL(dp), DIMENSION(:,:,:)   , INTENT(INOUT)     :: b3D_prime
+
+            ! residual stuff for ADI
+            REAL(dp), INTENT(IN)    :: res_tol_p
+            INTEGER, INTENT(IN)     :: max_it_ADI_p
+
             ! build coefficients
             CALL PRESS_CRCTR_COEFFS_BLDR(Nx, Ny, Nz, params, del_x, del_y, del_z, &
-                                        p_prime, u_star, v_star, w_star, & 
+                                        u_star, v_star, w_star, & 
                                         aP_ndl, aN_ndl, aE_ndl, aS_ndl, aW_ndl, aB_ndl, aT_ndl, & 
                                         d_u, d_v, d_w, & 
                                         b3D_prime)
             
-            ! solve pressure correction equations                           
+            ! solve pressure correction equations 
+                                                          
             CALL ADI_3D_SOLVR_MAIN(res_tol_p, max_it_ADI_p, &
                                    aP_ndl, aN_ndl, aE_ndl, aS_ndl, aW_ndl, aB_ndl, aT_ndl, p_prime, b3D_prime)
         
@@ -30,7 +51,7 @@ MODULE PRESS_CRCTR_SLVR
 
         ! coeffiient matrix builder
         SUBROUTINE PRESS_CRCTR_COEFFS_BLDR(Nx, Ny, Nz, params, del_x, del_y, del_z, &
-                                        p_prime, u_star, v_star, w_star, & 
+                                        u_star, v_star, w_star, & 
                                         aP_ndl, aN_ndl, aE_ndl, aS_ndl, aW_ndl, aB_ndl, aT_ndl, & 
                                         d_u, d_v, d_w, & 
                                         b3D_prime)
@@ -42,34 +63,24 @@ MODULE PRESS_CRCTR_SLVR
             ! inputs
             INTEGER,  INTENT(IN)     :: Nx, Ny, Nz
 
-            REAL(dp), DIMENSION(:,:,:), INTENT(IN)     :: u_star, v_star, w_star ! velocity correction values
-            !REAL(dp), DIMENSION(:,:,:), INTENT(INOUT)  :: p_prime ! pressure correction values
-            !REAL(dp), INTENT(IN)    :: t
-            REAL(dp), INTENT(IN)    :: delx, del_y, del_z
-
-            REAL(dp), DIMENSION(:,:,:), INTENT(IN)     :: aN_stg, aE_stg, aS_stg, aW_stg, aB_stg, aT_stg
-            !REAL(dp)                :: dt
-
-            !REAL(dp), DIMENSION(:,:,:), ALLOCATABLE, INTENT(IN)   :: conv_grid_x_stg, conv_grid_y_stg, conv_grid_z_stg
             REAL(dp), DIMENSION(:),     ALLOCATABLE, INTENT(IN)   :: params
+
+            REAL(dp), DIMENSION(:,:,:), INTENT(IN)     :: u_star, v_star, w_star ! velocity correction values
+
+            REAL(dp), DIMENSION(:,:,:), INTENT(IN)     :: d_u, d_v, d_w
+    
+            REAL(dp), INTENT(IN)    :: del_x, del_y, del_z
 
             REAL(dp), DIMENSION(:,:,:)   , INTENT(OUT)     :: aP_ndl, aN_ndl, aE_ndl, aS_ndl, aW_ndl, aB_ndl, aT_ndl
             REAL(dp), DIMENSION(:,:,:)   , INTENT(OUT)     :: b3D_prime
-            !REAL(dp), DIMENSION(:,:,:)   , INTENT(INOUT)   :: phi3D_vel_crctr
 
             ! IMPLICIT
             INTEGER     :: i,j,k
 
-            !REAL(dp)    :: diff_coeff, gamma ! alpha an_ndld specific heat_ndl
-
-            !REAL(dp)    :: del_x, del_y, del_z, del_V, BC_E, BC_N, BC_S, BC_W, BC_B, BC_T, Lx, Ly, Lz, area, alpha, cp, rho  ! params for building coeff mat_ndlrices
-
+            REAL(dp)    :: rho
             REAL(dp)    :: area_xz, area_xy, area_yz
 
-
-            ! Lx          = params
-            ! Ly          = params
-            ! Lz          = params
+            rho = params(10)
         
             area_xy = del_x*del_y
             area_xz = del_x*del_z
@@ -120,4 +131,4 @@ MODULE PRESS_CRCTR_SLVR
 
         END SUBROUTINE PRESS_CRCTR_COEFFS_BLDR
 
-END MODULE PRESS_CRCT_SLVR
+END MODULE PRESS_CRCTR_SLVR

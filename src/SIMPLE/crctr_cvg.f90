@@ -6,22 +6,55 @@ MODULE CRCTR_CVG
 
     CONTAINS
         ! subroutine to apply corrections to velocity and pressure
-        SUBROUTINE CORRECTER(p, u, v, w, p_star, p_prime, u_star, v_star, w_star, d_u, d_v, d_w, &
+        SUBROUTINE CORRECTER(Nx, Ny, Nz, p, u, v, w, p_star, p_prime, u_star, v_star, w_star, d_u, d_v, d_w, &
                              relax_vel, relax_p)
 
             INTEGER, PARAMETER :: dp = KIND(1.0D0)
 
+            INTEGER :: Nx, Ny, Nz
+
             REAL(dp), DIMENSION(:,:,:)   , AllOCATABLE, INTENT(IN)   :: u_star, v_star, w_star, p_star ! guesses
             REAL(dp), DIMENSION(:,:,:)   , AllOCATABLE, INTENT(IN)   :: p_prime ! pressure correction
 
-            REAL(dp), DIMENSION(:,:,:)   , AllOCATABLE, INTENT(OUT)  :: u,v,w,p ! updated values
+            REAL(dp), DIMENSION(:,:,:)   , AllOCATABLE, INTENT(INOUT)  :: u,v,w,p ! updated values
+
+            REAL(dp), DIMENSION(:,:,:), INTENT(IN)     :: d_u, d_v, d_w
 
             REAL(dp), INTENT(IN)    :: relax_vel, relax_p ! relaxation factors on corrections
 
-            p(i,j,k) = p_star(i,j,k) + p_prime(i,j,k)*relax_p
-            u(i,j,k) = u_star(i,j,k) + d_u(i,j,k)*(p_prime(i,j-1,k) - p_prime(i,j,k))*relax_vel
-            v(i,j,k) = v_star(i,j,k) + d_v(i,j,k)*(p_prime(i-1,j,k) - p_prime(i,j,k))*relax_vel
-            w(i,j,k) = w_star(i,j,k) + d_w(i,j,k)*(p_prime(i,j,k-1) - p_prime(i,j,k))*relax_vel
+            INTEGER  :: i,j,k
+
+            DO i = 1,Ny
+                DO j = 1,Nx
+                    DO k = 1,Nz
+                        p(i,j,k) = p_star(i,j,k) + p_prime(i,j,k)*relax_p
+                    END DO
+                END DO
+            END DO
+
+            DO i = 1,Ny
+                DO j = 2,Nx
+                    DO k = 1,Nz
+                        u(i,j,k) = u_star(i,j,k) + d_u(i,j,k)*(p_prime(i,j-1,k) - p_prime(i,j,k))*relax_vel
+                    END DO
+                END DO
+            END DO
+
+            DO i = 2,Ny
+                DO j = 1,Nx
+                    DO k = 1,Nz
+                        v(i,j,k) = v_star(i,j,k) + d_v(i,j,k)*(p_prime(i-1,j,k) - p_prime(i,j,k))*relax_vel
+                    END DO
+                END DO
+            END DO
+
+            DO i = 1,Ny
+                DO j = 1,Nx
+                    DO k = 2,Nz
+                        w(i,j,k) = w_star(i,j,k) + d_w(i,j,k)*(p_prime(i,j,k-1) - p_prime(i,j,k))*relax_vel
+                    END DO
+                END DO
+            END DO
         
         END SUBROUTINE CORRECTER
 
@@ -42,7 +75,7 @@ MODULE CRCTR_CVG
 
             REAL(dp)    :: cnty_check
 
-            INTEGER`:: i,j,k
+            INTEGER  :: i,j,k
 
             cnty_check = 0
 

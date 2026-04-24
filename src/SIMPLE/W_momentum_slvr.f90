@@ -33,9 +33,9 @@ MODULE W_MOMENTUM_SLVR
             REAL(dp), DIMENSION(:,:,:)   , INTENT(IN)     :: u_star, v_star, p_star ! corrrection values
 
             ! coeff matrices
-            REAL(dp), DIMENSION(:,:,:)   , INTENT(IN)     :: aP_stg_w, aN_stg_w, aE_stg_w, aS_stg_w, & 
+            REAL(dp), DIMENSION(:,:,:)   , INTENT(INOUT)     :: aP_stg_w, aN_stg_w, aE_stg_w, aS_stg_w, & 
                                                              aW_stg_w, aB_stg_w, aT_stg_w
-            REAL(dp), DIMENSION(:,:,:)   , INTENT(IN)     :: b3D_w
+            REAL(dp), DIMENSION(:,:,:)   , INTENT(INOUT)     :: b3D_w
 
             ! residual stuff for ADI
             REAL(dp), INTENT(IN)    :: res_tol_vel
@@ -57,7 +57,7 @@ MODULE W_MOMENTUM_SLVR
         SUBROUTINE W_COEFF_BLDR(Nx, Ny, Nz, params, del_x, del_y, del_z, & 
                                         aP_stg_w, aN_stg_w, aE_stg_w, aS_stg_w, aW_stg_w, aB_stg_w, aT_stg_w, b3D_w, &
                                         u_star, v_star, w_star, p_star, &
-                                        BC_N_u, BC_E_u, BC_S_u, BC_W_u, BC_T_u, BC_B_u, &
+                                        BC_N_w, BC_E_w, BC_S_w, BC_W_w, BC_T_w, BC_B_w, &
                                         d_w)
 
             IMPLICIT NONE
@@ -89,7 +89,9 @@ MODULE W_MOMENTUM_SLVR
             REAL(dp)    :: del_V, Lx, Ly, Lz ! volume of element and length of domain
             REAL(dp)    :: area_xz, area_xy, area_yz
 
-            REAL(dp)    :: bN, bE, bS, bW, bB, bT   ! modified boundary conditons from BC input
+            ! boundary conditions
+            REAL(dp), INTENT(IN)    :: BC_N_w, BC_E_w, BC_S_w, BC_W_w, BC_T_w, BC_B_w
+
 
             REAL(dp)    :: D_e, Diff_w, D_n, D_s, D_t, D_b, aP_stg_0   ! cst reusab_stgle neighbour coeffs 
 
