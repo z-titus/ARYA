@@ -1,4 +1,6 @@
+.
 /_case
 /.vscode
 /src/oneD_conduction
 /src/temperature
+/src/sliding_lid/energy_tst.f90

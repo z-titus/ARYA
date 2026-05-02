@@ -12,7 +12,8 @@ OBJDEPEND = $(OBJDIR)/adi_3D_solvr.o \
 			$(OBJDIR)/V_momentum_slvr.o \
 			$(OBJDIR)/W_momentum_slvr.o\
 			$(OBJDIR)/press_crctr_slvr.o\
-			$(OBJDIR)/crctr_cvg.o
+			$(OBJDIR)/crctr_cvg.o \
+			$(OBJDIR)/adi_2D_sclrsolvr.o \
 
 OFILES = $(F90FILES:.f90=.o)
 MODFILES = $(F90FILES:.f90=.mod)

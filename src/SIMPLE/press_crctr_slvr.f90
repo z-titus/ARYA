@@ -87,6 +87,7 @@ MODULE PRESS_CRCTR_SLVR
             area_yz = del_y*del_z
 
             ! calculate a prime coefficients in pressure correction eqn
+            
             DO i = 1,Ny
                 DO j = 1,Nx
                     DO k = 1,Nz
@@ -95,8 +96,31 @@ MODULE PRESS_CRCTR_SLVR
                         aN_ndl(i,j,k) = rho*area_xz*d_v(i+1,j,k)
                         aW_ndl(i,j,k) = rho*area_yz*d_u(i,j,k)
                         aE_ndl(i,j,k) = rho*area_yz*d_u(i,j+1,k)
-                        aB_ndl(i,j,k) = rho*area_xy*d_w(i,j,k)
-                        aT_ndl(i,j,k) = rho*area_xy*d_w(i,j,k+1)
+                        ! aB_ndl(i,j,k) = rho*area_xy*d_w(i,j,k)
+                        ! aT_ndl(i,j,k) = rho*area_xy*d_w(i,j,k+1)
+                        
+                    END DO
+                END DO
+            END DO
+
+             DO i = 1,Ny
+                DO j = 1,Nx
+                    DO k = 1,Nz
+                        IF     (i == 1) THEN
+                             aS_ndl(i,j,k) = 0
+                        END IF
+
+                        IF (i == Ny) THEN
+                            aN_ndl(i,j,k) = 0
+                        END IF
+
+                        IF (j == 1) THEN
+                            aW_ndl(i,j,k) = 0
+                        END IF
+
+                        IF (j == Nx) THEN
+                            aE_ndl(i,j,k) = 0
+                        END IF
                         
                     END DO
                 END DO
@@ -107,7 +131,7 @@ MODULE PRESS_CRCTR_SLVR
                 DO j = 1,Nx
                     DO k = 1,Nz
                 
-                        aP_ndl(i,j,k) = aN_ndl(i,j,k) + aE_ndl(i,j,k) + aS_ndl(i,j,k) + aW_ndl(i,j,k)+ aB_ndl(i,j,k) + aT_ndl(i,j,k)
+                        aP_ndl(i,j,k) = aN_ndl(i,j,k) + aE_ndl(i,j,k) + aS_ndl(i,j,k) + aW_ndl(i,j,k)!+ aB_ndl(i,j,k) + aT_ndl(i,j,k)
                             
                     END DO
                 END DO
@@ -120,9 +144,9 @@ MODULE PRESS_CRCTR_SLVR
                     DO k = 1,Nz
 
                         ! continuity at cell faces in the staggered grid
-                        b3D_prime(i,j,k) = ((rho*u_star(i,j,k)) - (rho*u_star(i,j+1,k))) + &
-                                        ((rho*v_star(i,j,k)) - (rho*v_star(i+1,j,k))) + &
-                                        ((rho*w_star(i,j,k)) - (rho*w_star(i,j,k+1)))
+                        b3D_prime(i,j,k) = ((rho*u_star(i,j,k)*area_yz) - (rho*u_star(i,j+1,k))*area_yz) + &
+                                        ((rho*v_star(i,j,k)*area_xz) - (rho*v_star(i+1,j,k)*area_xz))
+                                        !((rho*w_star(i,j,k)) - (rho*w_star(i,j,k+1)))
                     
                     END DO
                 END DO

@@ -7,16 +7,16 @@ import vtk
 from vtk.util import numpy_support as vtk_np
 
 # list data outputs
-sclrs = [r'Enthalpy (J/kg)']
+sclrs = [r'u (m/s)', r'v (m/s)']
 time_series = True
 
 # read data input and output
 wsl_prfx = r'\\wsl.localhost\Ubuntu\home\zach_t\me6313\ARYA\_case'
-file_in = r'\energy\unst_energy3D.in' # in (Nx, Ny, Nz, Lx, Ly, Lz, Area, k, BCN, BCE, BCS, BCW, max_it, res_tol)
-files_out = r'\energy\ss_r_0.1' # output data - directory if its a series
+file_in = r'\sliding_lid\lid.in' # in (Nx, Ny, Nz, Lx, Ly, Lz, Area, k, BCN, BCE, BCS, BCW, max_it, res_tol)
+files_out = r'\sliding_lid\data\Re_400' # output data - directory if its a series
 
 post_prfx = r'\\wsl.localhost\Ubuntu\home\zach_t\me6313\post'
-vtr_fname = r'\energy\ss_bad' # a directory if outputting a series
+vtr_fname = r'\sliding_lid\tests' # a directory if outputting a series
 
 in_param_flags = ['Nx', 'Ny', 'Nz', 'Lx', 'Ly', 'Lz']
 

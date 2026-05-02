@@ -2,7 +2,7 @@ include ../MakeFile.in
 
 FC = gfortran
 # program to compile ->
-F90FILES = crctr_cvg.f90
+F90FILES = V_momentum_slvr.f90
 # dependences for program ->
 # OBJDEPEND = $(OBJDIR)/adi_3D_solvr.o \
 # 			$(OBJDIR)/tdma_scalar.o \

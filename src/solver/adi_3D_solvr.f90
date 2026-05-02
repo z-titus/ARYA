@@ -80,7 +80,7 @@ MODULE ADI_3D_SOLVR
                     PRINT *, 'ADI Converged on iteration', i
                     EXIT
                 ELSEIF (i == max_it) THEN
-                    PRINT *, 'ADI Max number of iterations reached'
+                    PRINT *, 'ADI Max number of iterations reached', 'r1=',res(1) 
                     PRINT *, 'Final normalized residual: ', res(i)/res(1)
                 END IF
 
@@ -272,8 +272,8 @@ MODULE ADI_3D_SOLVR
             r_sqr        = 0.0
             sum_r_sqr    = 0.0
             
-            DO i = 1, dimx
-                DO j = 1, dimy
+            DO i = 1, dimy
+                DO j = 1, dimx
                     DO k = 1, dimz
 
                         temp = 0.0

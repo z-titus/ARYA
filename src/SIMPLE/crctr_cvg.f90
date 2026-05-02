@@ -31,7 +31,7 @@ MODULE CRCTR_CVG
                     END DO
                 END DO
             END DO
-
+           
             DO i = 1,Ny
                 DO j = 2,Nx
                     DO k = 1,Nz
@@ -59,7 +59,7 @@ MODULE CRCTR_CVG
         END SUBROUTINE CORRECTER
 
         ! subroutine to check the convergence on b' from the pressure correction equation
-        SUBROUTINE CONTINUITY_CVG(Nx, Ny, Nz, b3D_prime, main_it, cnty_tol, cnty_ref, cnvrged)
+        SUBROUTINE CONTINUITY_CVG(Nx, Ny, Nz, b3D_prime, main_it, cnty_tol, cnty_ref, cnvrged, out_file)
 
             INTEGER, PARAMETER :: dp = KIND(1.0D0)
 
@@ -75,28 +75,38 @@ MODULE CRCTR_CVG
 
             REAL(dp)    :: cnty_check
 
-            INTEGER  :: i,j,k
+            CHARACTER(:), ALLOCATABLE, INTENT(IN)  :: out_file
+            CHARACTER(:), ALLOCATABLE :: out_file_res
 
-            cnty_check = 0
+            INTEGER  :: i,j,k, it_ref
+            INTEGER :: io, stat
+
+            it_ref = 5
 
             ! use sum of b' terms as the check
-            DO i = 1,Ny
-                DO j = 1,Nx
-                    DO k = 1,Nz
+            cnty_check = SUM(ABS(b3D_prime(:,:,:)))
 
-                        cnty_check = cnty_check + b3D_prime(i,j,k)
+            ! write out residual
+            out_file_res = TRIM(out_file) // 'res'
 
-                    END DO
-                END DO
-            END DO
+            IF (main_it == 1) THEN
+                  ! Write to file now
+                OPEN(newunit=io, file=out_file_res, status="replace", action="write", iostat=stat)
+                WRITE(io,*) cnty_check
+                CLOSE(io)
+            ELSE
+                OPEN(newunit=io, file=out_file_res, status='old', position='append', action='write', iostat=stat)
+                WRITE(io,*) cnty_check
+                CLOSE(io)
+            END IF
 
             ! store reference continiuty check after 3 main iterations
-            IF (main_it == 3) THEN
+            IF (main_it == it_ref) THEN
                 cnty_ref = cnty_check
             END IF
 
             ! if the b prime is within a designated tolerance, consider the simulation converged
-            IF (((cnty_check/cnty_ref) < cnty_tol) .AND. (main_it > 3)) THEN
+            IF (((cnty_check/cnty_ref) < cnty_tol) .AND. (main_it > it_ref)) THEN
                 cnvrged = .TRUE.
             ELSE
                 cnvrged = .FALSE.

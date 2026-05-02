@@ -9,60 +9,61 @@ MODULE U_MOMENTUM_SLVR
 
     CONTAINS
 
-        SUBROUTINE U_MOMENTUM_SLVR_MAIN(Nx, Ny, Nz, params, del_x, del_y, del_z, & 
-                              aP_stg_u, aN_stg_u, aE_stg_u, aS_stg_u, aW_stg_u, aB_stg_u, aT_stg_u, b3D_u, &
-                              u_star, v_star, w_star, p_star, &
-                              BC_N_u, BC_E_u, BC_S_u, BC_W_u, BC_T_u, BC_B_u, &
-                              d_u, &
-                              res_tol_vel, max_it_ADI_vel)
+        ! SUBROUTINE U_MOMENTUM_SLVR_MAIN(Nx, Ny, Nz, params, del_x, del_y, del_z, & 
+        !                       aP_stg_u, aN_stg_u, aE_stg_u, aS_stg_u, aW_stg_u, aB_stg_u, aT_stg_u, b3D_u, &
+        !                       u_star, v_star, w_star, p_star, &
+        !                       BC_N_u, BC_E_u, BC_S_u, BC_W_u, BC_T_u, BC_B_u, &
+        !                       d_u, &
+        !                       res_tol_vel, max_it_ADI_vel)
             
-            INTEGER, PARAMETER  :: dp = KIND(1.0D0)                  
+        !     INTEGER, PARAMETER  :: dp = KIND(1.0D0)                  
 
-            ! Stuff to keep around after
-            REAL(dp), DIMENSION(:,:,:)   , INTENT(INOUT)     :: u_star
-            REAL(dp), DIMENSION(:,:,:)   , INTENT(INOUT)     :: d_u
+        !     ! Stuff to keep around after
+        !     REAL(dp), DIMENSION(:,:,:)   , INTENT(INOUT)     :: u_star
+        !     REAL(dp), DIMENSION(:,:,:)   , INTENT(INOUT)     :: d_u
 
-            ! domain stuff
-            INTEGER,  INTENT(IN)     :: Nx, Ny, Nz
-            REAL(dp), DIMENSION(:),     ALLOCATABLE, INTENT(IN)   :: params
-            REAL(dp), INTENT(IN)    :: del_x, del_y, del_z
+        !     ! domain stuff
+        !     INTEGER,  INTENT(IN)     :: Nx, Ny, Nz
+        !     REAL(dp), DIMENSION(:),     ALLOCATABLE, INTENT(IN)   :: params
+        !     REAL(dp), INTENT(IN)    :: del_x, del_y, del_z
 
-            ! boundary conditions
-            REAL(dp), INTENT(IN)    :: BC_N_u, BC_E_u, BC_S_u, BC_W_u, BC_T_u, BC_B_u
+        !     ! boundary conditions
+        !     REAL(dp), INTENT(IN)    :: BC_N_u, BC_E_u, BC_S_u, BC_W_u, BC_T_u, BC_B_u
 
-            ! velocities and pressures not updated
-            REAL(dp), DIMENSION(:,:,:)   , INTENT(IN)     :: v_star, w_star, p_star ! corrrection values
+        !     ! velocities and pressures not updated
+        !     REAL(dp), DIMENSION(:,:,:)   , INTENT(IN)     :: v_star, w_star, p_star ! corrrection values
+        !     REAL(dp), DIMENSION(:,:,:)   , INTENT(IN)        :: u_0
 
-            ! coeff matrices
-            REAL(dp), DIMENSION(:,:,:)   , INTENT(INOUT)     :: aP_stg_u, aN_stg_u, aE_stg_u, aS_stg_u, & 
-                                                                aW_stg_u, aB_stg_u, aT_stg_u
-            REAL(dp), DIMENSION(:,:,:)   , INTENT(INOUT)     :: b3D_u
+        !     ! coeff matrices
+        !     REAL(dp), DIMENSION(:,:,:)   , INTENT(INOUT)     :: aP_stg_u, aN_stg_u, aE_stg_u, aS_stg_u, & 
+        !                                                         aW_stg_u, aB_stg_u, aT_stg_u
+        !     REAL(dp), DIMENSION(:,:,:)   , INTENT(INOUT)     :: b3D_u
 
-            ! residual stuff for ADI
-            REAL(dp), INTENT(IN)    :: res_tol_vel
-            INTEGER, INTENT(IN)     :: max_it_ADI_vel
+        !     ! residual stuff for ADI
+        !     REAL(dp), INTENT(IN)    :: res_tol_vel
+        !     INTEGER, INTENT(IN)     :: max_it_ADI_vel
 
-            ! Build coefficient matrices
-            CALL U_COEFF_BLDR(Nx, Ny, Nz, params, del_x, del_y, del_z, & 
-                              aP_stg_u, aN_stg_u, aE_stg_u, aS_stg_u, aW_stg_u, aB_stg_u, aT_stg_u, b3D_u, &
-                              u_star, v_star, w_star, p_star, &
-                              BC_N_u, BC_E_u, BC_S_u, BC_W_u, BC_T_u, BC_B_u, &
-                              d_u)
+        !     ! Build coefficient matrices
+        !     CALL U_COEFF_BLDR(Nx, Ny, Nz, params, visc, del_x, del_y, del_z, & 
+        !                       aP_stg_u, aN_stg_u, aE_stg_u, aS_stg_u, aW_stg_u, aB_stg_u, aT_stg_u, b3D_u, &
+        !                       u_star, v_star, w_star, p_star, &
+        !                       BC_N_u, BC_E_u, BC_S_u, BC_W_u, BC_T_u, BC_B_u, &
+        !                       d_u, u_0)
 
-            ! solve for u_star with ADI routine - don't solve at the walls
-            CALL ADI_3D_SOLVR_MAIN(res_tol_vel, max_it_ADI_vel, aP_stg_u(:,2:Nx,:), aN_stg_u(:,2:Nx,:), &
-                                   aE_stg_u(:,2:Nx,:), aS_stg_u(:,2:Nx,:), aW_stg_u(:,2:Nx,:), aB_stg_u(:,2:Nx,:), &
-                                   aT_stg_u(:,2:Nx,:), u_star(:,2:Nx,:), b3D_u(:,2:Nx,:))
+        !     ! solve for u_star with ADI routine - don't solve at the walls
+        !     CALL ADI_3D_SOLVR_MAIN(res_tol_vel, max_it_ADI_vel, aP_stg_u(:,2:Nx,:), aN_stg_u(:,2:Nx,:), &
+        !                            aE_stg_u(:,2:Nx,:), aS_stg_u(:,2:Nx,:), aW_stg_u(:,2:Nx,:), aB_stg_u(:,2:Nx,:), &
+        !                            aT_stg_u(:,2:Nx,:), u_star(:,2:Nx,:), b3D_u(:,2:Nx,:))
 
-        END SUBROUTINE U_MOMENTUM_SLVR_MAIN
+        ! END SUBROUTINE U_MOMENTUM_SLVR_MAIN
 
 
         ! get coefficients to solve the u momentum eqn (u star)
-        SUBROUTINE U_COEFF_BLDR(Nx, Ny, Nz, params, del_x, del_y, del_z, & 
+        SUBROUTINE U_COEFF_BLDR(Nx, Ny, Nz, params, visc, del_x, del_y, del_z, & 
                                 aP_stg_u, aN_stg_u, aE_stg_u, aS_stg_u, aW_stg_u, aB_stg_u, aT_stg_u, b3D_u, &
                                 u_star, v_star, w_star, p_star, &
                                 BC_N_u, BC_E_u, BC_S_u, BC_W_u, BC_T_u, BC_B_u, &
-                                d_u)
+                                d_u, u_0)
 
             IMPLICIT NONE
 
@@ -71,7 +72,7 @@ MODULE U_MOMENTUM_SLVR
             ! domain stuff
             INTEGER,  INTENT(IN)     :: Nx, Ny, Nz
             REAL(dp), DIMENSION(:),     ALLOCATABLE, INTENT(IN)   :: params
-            REAL(dp), INTENT(IN)    :: del_x, del_y, del_z
+            REAL(dp), INTENT(IN)    :: del_x, del_y, del_z, visc
 
             ! coeff matrices
             REAL(dp), DIMENSION(:,:,:)   , INTENT(OUT)     :: aP_stg_u, aN_stg_u, aE_stg_u, aS_stg_u, & 
@@ -85,6 +86,7 @@ MODULE U_MOMENTUM_SLVR
             ! flow quantities
             REAL(dp), DIMENSION(:,:,:), INTENT(IN)        :: u_star, v_star, w_star ! velocity correction values
             REAL(dp), DIMENSION(:,:,:), INTENT(IN)        :: p_star ! pressure 
+            REAL(dp), DIMENSION(:,:,:), INTENT(IN)        :: u_0
 
             ! implicit stuff
             REAL(dp)                :: dt
@@ -94,7 +96,7 @@ MODULE U_MOMENTUM_SLVR
             INTEGER     :: i,j,k
             INTEGER     :: Nx_stg !add 1 to Nx input to form the staggered grid loops
 
-            REAL(dp)    :: diff_coeff, rho, visc
+            REAL(dp)    :: diff_coeff, rho
             REAL(dp)    :: del_V, Lx, Ly, Lz ! volume of element and length of domain
             REAL(dp)    :: area_xz, area_xy, area_yz
 
@@ -118,19 +120,12 @@ MODULE U_MOMENTUM_SLVR
             dt          = params(7)
 
             rho         = params(10)
-            visc        = params(12)
 
             diff_coeff  = visc
 
-            ! diffusion contributions -
-            D_e = diff_coeff/del_x
-            D_w = diff_coeff/del_x
 
-            D_n = diff_coeff/del_y
-            D_s = diff_coeff/del_y
-
-            D_b = diff_coeff/del_z
-            D_t = diff_coeff/del_z
+            D_b = 0
+            D_t = 0
 
             area_xy = del_x*del_y
             area_xz = del_x*del_z
@@ -138,8 +133,16 @@ MODULE U_MOMENTUM_SLVR
 
             del_V = del_x*del_y*del_z
 
+            ! diffusion contributions
+            D_e = (diff_coeff/del_x)*area_yz
+            D_w = (diff_coeff/del_x)*area_yz
+
+            D_n = (diff_coeff/del_y)*area_xz
+            D_s = (diff_coeff/del_y)*area_xz
+
+
             ! implicit unsteady piece contribution
-            aP_stg_0 = (rho*del_V)/dt 
+            aP_stg_0 = (rho*del_x*del_y)/dt 
 
             ! 3D convection terms
             DO i = 1,Ny
@@ -156,14 +159,16 @@ MODULE U_MOMENTUM_SLVR
                             F_t(i,j,k) = 0
                         
                         ELSE
-                            F_w(i,j,k) = rho*0.5*(u_star(i,j-1,k) + u_star(i,j,k))
-                            F_e(i,j,k) = rho*0.5*(u_star(i,j,k)   + u_star(i,j+1,k))
+                            F_w(i,j,k) = rho*0.5*(u_star(i,j-1,k) + u_star(i,j,k))*area_yz
+                            F_e(i,j,k) = rho*0.5*(u_star(i,j,k)   + u_star(i,j+1,k))*area_yz
 
-                            F_s(i,j,k) = rho*0.5*(v_star(i,j-1,k)   + v_star(i,j,k))
-                            F_n(i,j,k) = rho*0.5*(v_star(i+1,j-1,k) + v_star(i+1,j,k))
+                            F_s(i,j,k) = rho*0.5*(v_star(i,j-1,k)   + v_star(i,j,k))*area_xz
+                            F_n(i,j,k) = rho*0.5*(v_star(i+1,j-1,k) + v_star(i+1,j,k))*area_xz
 
-                            F_b(i,j,k) = rho*0.5*(w_star(i,j-1,k)   + w_star(i,j,k))
-                            F_t(i,j,k) = rho*0.5*(w_star(i,j-1,k+1) + w_star(i,j,k+1))
+                            ! F_b(i,j,k) = rho*0.5*(w_star(i,j-1,k)   + w_star(i,j,k))
+                            ! F_t(i,j,k) = rho*0.5*(w_star(i,j-1,k+1) + w_star(i,j,k+1))
+                            F_b(i,j,k) = 0
+                            F_t(i,j,k) = 0
                         END IF
 
                     END DO
@@ -199,32 +204,37 @@ MODULE U_MOMENTUM_SLVR
                         IF (i == 1) THEN
                             Su_D_S(i,j,k) = 0
                             Sp_D_S(i,j,k) = -2*visc*area_xz/del_y
+                            !Sp_D_S(i,j,k) = -2*visc/del_y
                         END IF
 
                         IF (j == 2) THEN
                             Su_D_W(i,j,k) = 0
                             Sp_D_W(i,j,k) = -visc*area_yz/del_x
+                            !Sp_D_W(i,j,k) = -visc/del_x
                         END IF
 
                         IF (i == Ny) THEN
-                            Su_D_N(i,j,k) =  2*visc*area_xz*BC_N_u/del_y ! contribution from the slip wall
+                            !Su_D_N(i,j,k) =  2*visc*area_xz*BC_N_u/del_y ! contribution from the slip wall
+                            Su_D_N(i,j,k) =  2*visc*BC_N_u*area_xz/del_y ! contribution from the slip wall
                             Sp_D_N(i,j,k) = -2*visc*area_xz/del_y
+                            !Sp_D_N(i,j,k) = -2*visc/del_y
                         END IF
 
                         IF (j == Nx) THEN
                             Su_D_E(i,j,k) = 0
                             Sp_D_E(i,j,k) = -visc*area_yz/del_x
+                            !Sp_D_E(i,j,k) = -visc/del_x
                         END IF
 
-                        IF (k == 1) THEN
-                            Su_D_B(i,j,k) = 0
-                            Sp_D_B(i,j,k) = -2*visc*area_xy/del_z
-                        END IF
+                        ! IF (k == 1) THEN
+                        !     Su_D_B(i,j,k) = 0
+                        !     Sp_D_B(i,j,k) = -2*visc*area_xy/del_z
+                        ! END IF
 
-                        IF (k == Nz) THEN
-                            Su_D_T(i,j,k) = 0
-                            Sp_D_T(i,j,k) = -2*visc*area_xy/del_z
-                        END IF
+                        ! IF (k == Nz) THEN
+                        !     Su_D_T(i,j,k) = 0
+                        !     Sp_D_T(i,j,k) = -2*visc*area_xy/del_z
+                        ! END IF
 
                     END DO
                 END DO
@@ -254,11 +264,11 @@ MODULE U_MOMENTUM_SLVR
             DO i = 1,Ny
                 DO j = 1,Nx_stg
                     DO k = 1,Nz
-                        aE_stg_u(i,j,k) = D_e + F_e(i,j,k)
+                        aE_stg_u(i,j,k) = D_e - F_e(i,j,k)
                         aW_stg_u(i,j,k) = D_w + F_w(i,j,k)
                         aS_stg_u(i,j,k) = D_s + F_s(i,j,k)
-                        aN_stg_u(i,j,k) = D_n + F_n(i,j,k)
-                        aT_stg_u(i,j,k) = D_t + F_t(i,j,k)
+                        aN_stg_u(i,j,k) = D_n - F_n(i,j,k)
+                        aT_stg_u(i,j,k) = D_t - F_t(i,j,k)
                         aB_stg_u(i,j,k) = D_b + F_b(i,j,k)
                     END DO 
                 END DO
@@ -303,11 +313,13 @@ MODULE U_MOMENTUM_SLVR
                     DO k = 1,Nz
                 
                         aP_stg_u(i,j,k) =    aN_stg_u(i,j,k) + aE_stg_u(i,j,k) + aS_stg_u(i,j,k) + & 
-                                             aW_stg_u(i,j,k)+ aB_stg_u(i,j,k) + aT_stg_u(i,j,k) & 
+                                             aW_stg_u(i,j,k) &
+                                             !+ aB_stg_u(i,j,k) + aT_stg_u(i,j,k) & 
                                             - Sp_D_N(i,j,k) - Sp_D_E(i,j,k) - Sp_D_S(i,j,k) - Sp_D_W(i,j,k) &
-                                            - Sp_D_B(i,j,k) - Sp_D_T(i,j,k)  &
+                                            !- Sp_D_B(i,j,k) - Sp_D_T(i,j,k)  &
                                             - Sp_F_N(i,j,k) - Sp_F_E(i,j,k) - Sp_F_S(i,j,k) - Sp_F_W(i,j,k) &
-                                            - Sp_F_B(i,j,k) - Sp_F_T(i,j,k) & ! linearized boundary
+                                            !+ F_w(i,j,k) + F_s(i,j,k) - F_n(i,j,k) - F_e(i,j,k) &
+                                            !- Sp_F_B(i,j,k) - Sp_F_T(i,j,k) & ! linearized boundary
                                             + aP_stg_0
                     END DO
                 END DO
@@ -322,26 +334,30 @@ MODULE U_MOMENTUM_SLVR
 
                         IF (j == 1) THEN
                         b3D_u(i,j,k) =   Su_D_N(i,j,k) + Su_D_E(i,j,k) + Su_D_S(i,j,k) &
-                                        + Su_D_W(i,j,k) + Su_D_B(i,j,k) + Su_D_T(i,j,k) &
+                                        + Su_D_W(i,j,k) &
+                                        !+ Su_D_B(i,j,k) + Su_D_T(i,j,k) &
                                         + Su_F_N(i,j,k) + Su_F_E(i,j,k) + Su_F_S(i,j,k) &
-                                        + Su_F_W(i,j,k) + Su_F_B(i,j,k) + Su_F_T(i,j,k) &
-                                        + aP_stg_0*u_star(i,j,k) &  ! unsteady piece
-                                        + (-p_star(i,j,k))*area_yz ! pressure piece
+                                        + Su_F_W(i,j,k) &
+                                        !+ Su_F_B(i,j,k) + Su_F_T(i,j,k) &
+                                        + aP_stg_0*u_0(i,j,k)! &  ! unsteady piece
+                                        !+ (-p_star(i,j,k))*area_yz ! pressure piece
                         
                         ELSEIF (j == Nx_stg) THEN
                         b3D_u(i,j,k) =   Su_D_N(i,j,k) + Su_D_E(i,j,k) + Su_D_S(i,j,k) &
                                         + Su_D_W(i,j,k) + Su_D_B(i,j,k) + Su_D_T(i,j,k) &
                                         + Su_F_N(i,j,k) + Su_F_E(i,j,k) + Su_F_S(i,j,k) &
                                         + Su_F_W(i,j,k) + Su_F_B(i,j,k) + Su_F_T(i,j,k) &
-                                        + aP_stg_0*u_star(i,j,k)  &  ! unsteady piece
-                                        + (p_star(i,j-1,k))*area_yz ! pressure piece
+                                        + aP_stg_0*u_0(i,j,k)  !&  ! unsteady piece
+                                        !+ (p_star(i,j-1,k))*area_yz ! pressure piece
                         
                         ELSE
                         b3D_u(i,j,k) =   Su_D_N(i,j,k) + Su_D_E(i,j,k) + Su_D_S(i,j,k) &
-                                        + Su_D_W(i,j,k) + Su_D_B(i,j,k) + Su_D_T(i,j,k) &
+                                        + Su_D_W(i,j,k) &
+                                        !+ Su_D_B(i,j,k) + Su_D_T(i,j,k) &
                                         + Su_F_N(i,j,k) + Su_F_E(i,j,k) + Su_F_S(i,j,k) &
-                                        + Su_F_W(i,j,k) + Su_F_B(i,j,k) + Su_F_T(i,j,k) &
-                                        + aP_stg_0*u_star(i,j,k) &! unsteady piece
+                                        + Su_F_W(i,j,k) &
+                                        !+ Su_F_B(i,j,k) + Su_F_T(i,j,k) &
+                                        + aP_stg_0*u_0(i,j,k) &! unsteady piece
                                         + (p_star(i,j-1,k)-p_star(i,j,k))*area_yz ! pressure piece
                         END IF
                     
@@ -355,7 +371,8 @@ MODULE U_MOMENTUM_SLVR
                     DO k = 1,Nz
 
                         d_u(i,j,k)      =  area_yz/(aP_stg_u(i,j,k) - (aN_stg_u(i,j,k) + aE_stg_u(i,j,k) + aS_stg_u(i,j,k) & 
-                                                                       + aW_stg_u(i,j,k)+ aB_stg_u(i,j,k) + aT_stg_u(i,j,k)))
+                                                                       + aW_stg_u(i,j,k)))
+                                                                       !+ aB_stg_u(i,j,k) + aT_stg_u(i,j,k)))
                 
                     END DO
                 END DO

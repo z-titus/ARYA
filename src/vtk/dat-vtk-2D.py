@@ -7,27 +7,25 @@ import vtk
 from vtk.util import numpy_support as vtk_np
 
 # list data outputs
-sclrs = [r'Energy (J/kg)']
-BC_add = True # add boundary conditions to the grid
+sclrs = [r'u (m/s)', r'v (m/s)']
+dataflags = ['u', 'v']
+time_series = False
 
 # read data input and output
 wsl_prfx = r'\\wsl.localhost\Ubuntu\home\zach_t\me6313\ARYA\_case'
-file_in = r'\energy\energy.in' # in (Nx, Ny, Lx, Ly, Area, k, BCN, BCE, BCS, BCW, max_it, res_tol)
-files_out = [r'\energy\energy.out'] # output data
+file_in = r'\sliding_lid\lid.in' # in (Nx, Ny, Nz, Lx, Ly, Lz, Area, k, BCN, BCE, BCS, BCW, max_it, res_tol)
+files_out = r'\sliding_lid\data\Re_400' # output data - directory if its a series
 
 post_prfx = r'\\wsl.localhost\Ubuntu\home\zach_t\me6313\post'
-vtr_fname = r'\energy\energy_adv_diff_PeX_10_Y_1.vtr'
+vtr_fname = r'\sliding_lid\tests' # a directory if outputting a series
 
 in_param_flags = ['Nx', 'Ny', 'Lx', 'Ly']
-if 'Energy (J/kg)' in sclrs:
-    in_param_flags.append('BCNT')
-    in_param_flags.append('BCET')
-    in_param_flags.append('BCST')
-    in_param_flags.append('BCWT')
 
 in_param = []
 
-sclr_data = []
+#sclr_data = []
+
+n = 1
 
 def read_file_in(filename):
     with open(wsl_prfx+filename, 'r') as file:
@@ -40,84 +38,77 @@ def read_file_in(filename):
                 else:
                     pass
 
-def read_file_out(out_files):
-    for filename in out_files:
-        with open(wsl_prfx+filename, 'r') as file:
-            for line in file:
-                sclr_data.append(float(line))
-
-def bld_grid_data(Nx, Ny, BCN, BCE, BCS, BCW, sclr_data, BC_add, grid_data):
-    if BC_add:
-        # first row is south BC
-        grid_data[0:Nx+2] = BCS
-        n = 0
-        
-        for i in range(1,Ny+1):
-            x_strt = Nx+n+2
-            grid_data[x_strt] = BCW
-            grid_data[x_strt+1:x_strt+Nx+1]= sclr_data[(i-1)*Nx:i*Nx]
-            grid_data[x_strt+Nx+1] = BCE
-            
-            n += Nx + 2 
-        grid_data[(Nx+2)*(Ny+2)-(Nx+2):(Nx+2)*(Ny+2)] = BCN
-        
-    else:
-        grid_data = sclr_data
-        pass
-
-    return grid_data
+def read_file_out(sclr_data, out_file):
+    with open(out_file, 'r') as file:
+        for line in file:
+            sclr_data.append(float(line))
+    return sclr_data
     
 
-def main():
-    read_file_in(file_in)
-    read_file_out(files_out)
+def data_vtr_cnvrtr(in_file, out_file, main_it, data):
+    sclr_data = []
+
+    read_file_in(in_file)
+    read_file_out(sclr_data, out_file)
 
     Nx = int(in_param[0])
     Ny = int(in_param[1])
+   
     Lx = in_param[2]
     Ly = in_param[3]
 
-    if 'Energy (J/kg)' in sclrs:
-        BCN = (in_param[4]+273)*1005
-        BCE = (in_param[5]+273)*1005
-        BCS = (in_param[6]+273)*1005
-        BCW = (in_param[7]+273)*1005
+    
+    if data == 'u':
+        xdim = Nx+1
+        ydim = Ny+2
 
-    grid_data = np.empty((Nx+2)*(Ny+2))
-    grid_data = bld_grid_data(Nx, Ny, BCN, BCE, BCS, BCW, sclr_data, BC_add, grid_data)
+        X0 = Lx/Nx
+        Y0 = (Ly/Ny)/2
+    if data == 'v':
+        xdim = Nx+2
+        ydim = Ny+1
 
+        X0 = (Lx/Nx)/2
+        Y0 = Ly/Ny
+    if data == 'sclr':
+        xdim = Nx+2
+        ydim = Ny+2
+
+        X0 = (Lx/Nx)/2
+        Y0 = (Ly/Ny)/2
+
+    grid_data = np.empty(xdim*ydim*1)
+
+    grid_data = np.array(sclr_data, dtype=np.float64)
+    grid_data = np.round(grid_data, decimals=1)
+    print(grid_data.shape)
 
     grid = vtk.vtkRectilinearGrid()
 
-    grid.SetDimensions(int(Nx+2), int(Ny+2), int(1)) # number of points in each direction
+    grid.SetDimensions(int(xdim), int(ydim), int(1)) # number of points in each direction
   
     # build grid for scalar array in physical units (m) as numpy arrays
-    sclrXgrid = np.zeros(Nx+2, dtype = float)
-    sclrYgrid = np.zeros(Ny+2, dtype = float)
+    sclrXgrid = np.zeros(xdim, dtype = float)
+    sclrYgrid = np.zeros(ydim, dtype = float)
+
+    expected = xdim * ydim * 1
+    actual = len(sclr_data)
+
+    if actual != expected:
+        raise ValueError(f"Data size mismatch: expected {expected}, got {actual}")
+
 
     sclrXgrid[0], sclrXgrid[-1]  = 0, Lx
     sclrYgrid[0], sclrYgrid[-1]  = 0, Ly
 
-    X0 = (Lx/Nx)/2
-    Y0 = (Ly/Ny)/2
     for i in range(1, Nx+1):
-        # if i == 0:
-        #     sclrXgrid[i] = 0
-        # elif i == Nx+2:
-        #     sclrXgrid = X0 + Lx/2
-        # else:
+    
         sclrXgrid[i] = X0
-
         X0 = X0 + Lx/Nx
 
     for i in range(1, Ny+1):
-        # if i == 0:
-        #     sclrYgrid[i] = 0
-        # elif i == Nx+2:
-        #     sclrYgrid = Y0 + Ly/2
-        # else:
+      
         sclrYgrid[i] = Y0
-
         Y0 = Y0 + Ly/Ny
     
 
@@ -126,20 +117,128 @@ def main():
 
     grid.SetXCoordinates(sclrXgrid)
     grid.SetYCoordinates(sclrYgrid)
+
     array = vtk.vtkDoubleArray()
     array.SetNumberOfComponents(1) # this is 3 for a vector
     array.SetNumberOfTuples(grid.GetNumberOfPoints())
-    for i in range(grid.GetNumberOfPoints()):
-        array.SetValue(i, grid_data[i])
+   
+    vtk_array = vtk_np.numpy_to_vtk(np.array(grid_data), deep=True)
+    vtk_array.SetName(sclrs[main_it])
+    grid.GetPointData().AddArray(vtk_array)
     
-    grid.GetPointData().AddArray(array)
-    print(grid)
-    array.SetName(sclrs[0])
 
     writer = vtk.vtkXMLRectilinearGridWriter()
-    writer.SetFileName(post_prfx+vtr_fname)
     writer.SetInputData(grid)
+    writer.SetDataModeToBinary()  # write data in binary - issues with ASCII format
+    writer.EncodeAppendedDataOff()
+    
+    tmp = r'\data_{}.vtr'.format(data)
+    print(post_prfx+vtr_fname+tmp)
+    writer.SetFileName(post_prfx+vtr_fname+tmp)
     writer.Write()
 
+def vector_vtr_cnvrtr(in_file, out_file, main_it, data):
+    u = []
+    v = []
+
+    read_file_in(in_file)
+    read_file_out(u, out_file[0])
+    read_file_out(v, out_file[1])
+
+    Nx = int(in_param[0])
+    Ny = int(in_param[1])
+   
+    Lx = in_param[2]
+    Ly = in_param[3]
+
+    # center both sets of data so they are colocated
+    u = np.array(u)
+    u = np.reshape(u, (Nx+1, Ny+2))
+    u_c = 0.5 * (u[0:Nx, :] + u[1:Nx+1, :])
+
+    v = np.array(v)
+    v = np.reshape(u, (Nx+2, Ny+1))
+    v_c = 0.5 * (v[:, 0:Ny] + v[:, 1:Ny+1])
+
+    N = Nx * Ny
+
+    vector_data = np.zeros((N, 3))
+    vector_data[:, 0] = u_c.flatten()
+    vector_data[:, 1] = v_c.flatten()
+    vector_data[:, 2] = 0.0
+
+
+    grid_data = np.empty((Nx+2))*(Ny+2))*1)
+
+    grid_data = np.array(sclr_data, dtype=np.float64)
+    grid_data = np.round(grid_data, decimals=1)
+    print(grid_data.shape)
+
+    grid = vtk.vtkRectilinearGrid()
+
+    vtk_vector = vtk_np.numpy_to_vtk(vector_data, deep=True)
+
+    vtk_vector.SetNumberOfComponents(3)
+    vtk_vector.SetName("U")  
+
+    grid.SetDimensions(int(Nx+2), int(Ny+2), int(1)) # number of points in each direction
+  
+    # build grid for scalar array in physical units (m) as numpy arrays
+    sclrXgrid = np.zeros(Nx+2, dtype = float)
+    sclrYgrid = np.zeros(Ny+2, dtype = float)
+
+ 
+    X0 = (Lx/Nx)/2
+    Y0 = (Ly/Ny)/2
+
+    sclrXgrid[0], sclrXgrid[-1]  = 0, Lx
+    sclrYgrid[0], sclrYgrid[-1]  = 0, Ly
+
+    for i in range(1, Nx+1):
+    
+        sclrXgrid[i] = X0
+        X0 = X0 + Lx/Nx
+
+    for i in range(1, Ny+1):
+      
+        sclrYgrid[i] = Y0
+        Y0 = Y0 + Ly/Ny
+    
+
+    sclrXgrid = vtk_np.numpy_to_vtk(sclrXgrid)
+    sclrYgrid = vtk_np.numpy_to_vtk(sclrYgrid)
+
+    grid.SetXCoordinates(sclrXgrid)
+    grid.SetYCoordinates(sclrYgrid)
+
+    #array = vtk.vtkDoubleArray()
+    vtk_vector = vtk_np.numpy_to_vtk(vector_data, deep=True)
+
+    vtk_vector.SetNumberOfComponents(3)
+    vtk_vector.SetName("U")  
+    #array.SetNumberOfComponents(3) # this is 3 for a vector
+    #array.SetNumberOfTuples(grid.GetNumberOfPoints())
+   
+    vtk_array = vtk_np.numpy_to_vtk(np.array(grid_data), deep=True)
+    vtk_array.SetName('U')
+    grid.GetPointData().SetVectors(vtk_vector)
+    
+
+    writer = vtk.vtkXMLRectilinearGridWriter()
+    writer.SetInputData(grid)
+    writer.SetDataModeToBinary()  # write data in binary - issues with ASCII format
+    writer.EncodeAppendedDataOff()
+    
+    tmp = r'\data_{}.vtr'.format(data)
+    print(post_prfx+vtr_fname+tmp)
+    writer.SetFileName(post_prfx+vtr_fname+tmp)
+    writer.Write()
+       
+
 if __name__ == '__main__':
-    main()
+    import os
+    os_list = sorted(os.listdir(wsl_prfx+files_out))
+    print(os_list)
+    for i in range(len(os_list)):
+        out_file_tmp = os.path.join(wsl_prfx + files_out, os_list[i])
+        #data_vtr_cnvrtr(file_in, out_file_tmp, main_it = i, data = dataflags[i])

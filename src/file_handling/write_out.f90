@@ -5,7 +5,7 @@ MODULE WRITE_OUTPUT
 
     CONTAINS
 
-        SUBROUTINE WRITE2D_OUTPUT_MAIN(out_data, out_file)
+        SUBROUTINE WRITE2D_OUTPUT_MAIN(bN, bE, bS, bW, out_data, out_file)
 
             ! PRECISION
             INTEGER, PARAMETER :: dp = KIND(1.0D0) ! double point
@@ -16,10 +16,15 @@ MODULE WRITE_OUTPUT
             REAL(dp), DIMENSION(:, :)  ::   out_data
             LOGICAL :: exists
             INTEGER :: io, stat
-            INTEGER :: i, j, nrows, ncols   ! num of rows and columns in 2D data array
+            INTEGER :: i, j, k, nrows, ncols, ydim, xdim   ! num of rows and columns in 2D data array
 
-            nrows = SIZE(out_data, 1)
-            ncols = SIZE(out_data, 2)
+            REAL(dp), INTENT(IN)    :: bN, bE, bS, bW
+
+            nrows = SIZE(out_data, 1)+2
+            ncols = SIZE(out_data, 2)+2
+
+            ydim = SIZE(out_data, 1)
+            xdim = SIZE(out_data, 2)
 
             ! Delete file if it already exists
             INQUIRE(file=out_file, exist=exists)
@@ -34,14 +39,33 @@ MODULE WRITE_OUTPUT
 
             PRINT *, stat
 
-            DO j = 1, ncols
-                DO i = 1, nrows
-
-                    WRITE(io,*) out_data(i,j)
-                    
-                END DO
+            ! write a row of south
+            DO i = 1, ncols
+                WRITE(io,*) bS
             END DO
 
+            DO k = 1, ydim
+
+                ! write west
+                WRITE(io,*) bW
+
+               
+                    DO j = 1, xdim
+                        
+                        WRITE(io,*) out_data(k,j)
+                        
+                    END DO
+                
+
+                ! write east
+                WRITE(io,*) bE  
+            END DO
+            
+            ! write a row of north
+            DO i = 1, ncols
+                WRITE(io,*) bN
+            END DO
+            
             CLOSE(io)
 
         END SUBROUTINE WRITE2D_OUTPUT_MAIN
