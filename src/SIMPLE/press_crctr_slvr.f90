@@ -152,6 +152,13 @@ MODULE PRESS_CRCTR_SLVR
                 END DO
             END DO  
 
+            aP_ndl(1,1,1) = 1.0_dp
+            aE_ndl(1,1,1) = 0.0_dp
+            aW_ndl(1,1,1) = 0.0_dp
+            aN_ndl(1,1,1) = 0.0_dp
+            aS_ndl(1,1,1) = 0.0_dp
+            b3D_prime(1,1,1) = 0.0_dp
+
 
         END SUBROUTINE PRESS_CRCTR_COEFFS_BLDR
 

@@ -2,18 +2,19 @@ include ../MakeFile.in
 
 FC = gfortran
 # program to compile ->
-F90FILES = sliding_lid.f90
+F90FILES = internal_geometry.f90
 # dependences for program ->
 OBJDEPEND = $(OBJDIR)/adi_3D_solvr.o \
 			$(OBJDIR)/tdma_scalar.o \
 			$(OBJDIR)/read_input.o \
 			$(OBJDIR)/write_out.o \
+			$(OBJDIR)/energy_solvr.o \
 			$(OBJDIR)/U_momentum_slvr.o \
 			$(OBJDIR)/V_momentum_slvr.o \
 			$(OBJDIR)/W_momentum_slvr.o\
 			$(OBJDIR)/press_crctr_slvr.o\
 			$(OBJDIR)/crctr_cvg.o \
-			$(OBJDIR)/adi_2D_sclrsolvr.o \
+			$(OBJDIR)/adi_2D_sclrsolvr.o 
 
 OFILES = $(F90FILES:.f90=.o)
 MODFILES = $(F90FILES:.f90=.mod)

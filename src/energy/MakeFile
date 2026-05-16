@@ -2,12 +2,12 @@ include ../MakeFile.in
 
 FC = gfortran
 # program to compile ->
-F90FILES = unst_conv_diff3D.f90
+F90FILES = energy_solvr.f90
 # dependences for program ->
-OBJDEPEND = $(OBJDIR)/adi_3D_solvr.o \
-			$(OBJDIR)/tdma_scalar.o \
-			$(OBJDIR)/read_input.o \
-			$(OBJDIR)/write_out.o
+# OBJDEPEND = $(OBJDIR)/adi_3D_solvr.o \
+# 			$(OBJDIR)/tdma_scalar.o \
+# 			$(OBJDIR)/read_input.o \
+# 			$(OBJDIR)/write_out.o
 
 OFILES = $(F90FILES:.f90=.o)
 MODFILES = $(F90FILES:.f90=.mod)
@@ -16,5 +16,5 @@ BINFILES = $(F90FILES:.f90=)
 make:
 	$(FC) -I$(MODDIR) -c $(F90FILES) -o $(OBJDIR)/$(OFILES)
 #-I flags the module directory. -c compiles the source files into object files. -o specifies the output file.
-	$(FC) -o $(BINDIR)/$(BINFILES) $(OBJDIR)/$(OFILES) $(OBJDEPEND)
+#	$(FC) -o $(BINDIR)/$(BINFILES) $(OBJDIR)/$(OFILES) $(OBJDEPEND)
 #-o compiles the executable. Then we give the object file for executable. Then dependencies.

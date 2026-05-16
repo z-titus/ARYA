@@ -8,6 +8,7 @@ PROGRAM MAIN
     USE READ_INPUT
     USE WRITE_OUTPUT
     USE ADI_2D_SCLRSOLVR
+    USE ENERGY_SLVR
 
     IMPLICIT NONE
 
@@ -89,6 +90,21 @@ PROGRAM MAIN
     !output
     CHARACTER(:), ALLOCATABLE  :: out_file_u, out_file_v, out_file_w, out_file_p
 
+    INTEGER :: Nx_int_start, Nx_int_end, Ny_int_start, Ny_int_end
+
+    ! energy
+    INTEGER     :: max_it_ADI_energy ! how many times to loop through the SIMPLE algorithm
+    REAL(dp)    :: res_tol_energy
+    REAL(dp), DIMENSION(:,:,:)   , AllOCATABLE   :: b3D_energy, phi3D_energy
+    INTEGER     :: n_iter_energy
+    REAL(dp)    ::  BCNT, BCET, BCST, BCWT, BCTT, BCBT, BC_N_energy, BC_E_energy, BC_S_energy, BC_W_energy
+    REAL(dp)    :: cp   
+    CHARACTER(:), ALLOCATABLE  :: out_file_h
+
+    REAL(dp), DIMENSION(:,:,:)   , AllOCATABLE   :: aP_ndl_energy, aN_ndl_energy, aE_ndl_energy, & 
+                                                    aS_ndl_energy, aW_ndl_energy, aB_ndl_energy, aT_ndl_energy   ! coefficient matrices for scalar
+
+
     
     CALL GET_COMMAND_ARGUMENT(1, in_file)   ! Recieve an input file from command line
     CALL READ_INPUT_MAIN(params, in_file, out_file)   ! Store paramaters from input file into params array
@@ -125,6 +141,11 @@ PROGRAM MAIN
     relax_vel      = params(32)
     relax_p        = params(33)
 
+    Nx_int_start=params(37)
+    Nx_int_end=params(38)
+    Ny_int_start=params(39)
+    Ny_int_end=params(40)
+
     ! boundary conditions 
     BC_N_u      = 1
     BC_E_u      = 0
@@ -146,6 +167,25 @@ PROGRAM MAIN
     BC_W_w      = 0
     BC_T_w      = 0
     BC_B_w      = 0
+
+    ! energy stuff
+    cp          = params(11)
+    n_iter_energy     = params(34)
+    max_it_ADI_energy = params(35)
+    res_tol_energy    = params(36)
+
+    ! boundary conditions
+    BCNT    = params(13)
+    BCET    = params(14)
+    BCST    = params(15)
+    BCWT    = params(16)
+    BCTT    = params(17)
+    BCBT    = params(18)
+
+    BC_N_energy = (BCNT+273)*cp
+    BC_E_energy = (BCET+273)*cp
+    BC_S_energy = (BCST+273)*cp
+    BC_W_energy = (BCWT+273)*cp
 
     ! viscosity is the 'controlled' variable - to keep time scales constant with changing Re
     visc = (rho*BC_N_u*Ly)/Re
@@ -182,6 +222,14 @@ PROGRAM MAIN
     ALLOCATE(aW_stg_w(Ny,Nx,Nz+1))
     ALLOCATE(aB_stg_w(Ny,Nx,Nz+1))
     ALLOCATE(aT_stg_w(Ny,Nx,Nz+1))
+
+    ALLOCATE(aP_ndl_energy(Ny,Nx,Nz))
+    ALLOCATE(aE_ndl_energy(Ny,Nx,Nz))
+    ALLOCATE(aS_ndl_energy(Ny,Nx,Nz))
+    ALLOCATE(aW_ndl_energy(Ny,Nx,Nz))
+    ALLOCATE(aN_ndl_energy(Ny,Nx,Nz))
+    ALLOCATE(aB_ndl_energy(Ny,Nx,Nz))
+    ALLOCATE(aT_ndl_energy(Ny,Nx,Nz))
     
     ! guessed values and values iterated on
     ALLOCATE(p_star(Ny,Nx,Nz))
@@ -213,6 +261,10 @@ PROGRAM MAIN
     ALLOCATE(b3D_v(Ny+1,Nx,Nz))
     ALLOCATE(b3D_w(Ny,Nx,Nz+1))
 
+    ! energy
+    ALLOCATE(phi3D_energy(Ny,Nx,Nz))
+    ALLOCATE(b3D_energy(Ny,Nx,Nz))
+
     ALLOCATE(res_temp_p(max_it_ADI_p+1))
     ALLOCATE(res_temp_vel(max_it_ADI_vel+1))
 
@@ -234,6 +286,7 @@ PROGRAM MAIN
 
         DO j = 1, n_iter_simple
 
+
             ! change to updated values
             u_star = u
             v_star = v
@@ -241,13 +294,13 @@ PROGRAM MAIN
             p_star = p
 
             !build coeffs for the momentum eqns
-            CALL U_COEFF_BLDR(Nx, Ny, Nz, params, visc, del_x, del_y, del_z, & 
+            CALL U_COEFF_BLDR_INT_GEOMETRY(Nx, Ny, Nz, params, visc, del_x, del_y, del_z, & 
                                 aP_stg_u, aN_stg_u, aE_stg_u, aS_stg_u, aW_stg_u, aB_stg_u, aT_stg_u, b3D_u, &
                                 u_star, v_star, w_star, p_star, &
                                 BC_N_u, BC_E_u, BC_S_u, BC_W_u, BC_T_u, BC_B_u, &
                                 d_u, u_0)
 
-            CALL V_COEFF_BLDR(Nx, Ny, Nz, params, visc, del_x, del_y, del_z, & 
+            CALL V_COEFF_BLDR_INT_GEOMETRY(Nx, Ny, Nz, params, visc, del_x, del_y, del_z, & 
                                 aP_stg_v, aN_stg_v, aE_stg_v, aS_stg_v, aW_stg_v, aB_stg_v, aT_stg_v, b3D_v, &
                                 u_star, v_star, w_star, p_star, &
                                 BC_N_v, BC_E_v, BC_S_v, BC_W_v, BC_T_v, BC_B_v, &
@@ -260,13 +313,44 @@ PROGRAM MAIN
                                 d_w, w_0)
 
             ! solve momentum eequations with coeffs
+                             
+            ! CALL ADI_3D_SOLVR_MAIN(res_tol_vel, max_it_ADI_vel, aP_stg_u(:,2:Nx,:), aN_stg_u(:,2:Nx,:), &
+            !                        aE_stg_u(:,2:Nx,:), aS_stg_u(:,2:Nx,:), aW_stg_u(:,2:Nx,:), aB_stg_u(:,2:Nx,:), &
+            !                        aT_stg_u(:,2:Nx,:), u_star(:,2:Nx,:), b3D_u(:,2:Nx,:))
             PRINT *, 'Solving u momentum...'
             CALL ADI_2D_SCLRSOLVR_MAIN(res_tol_vel, max_it_ADI_vel, aP_stg_u(:,2:Nx,1), aN_stg_u(:,2:Nx,1), &
                                    aE_stg_u(:,2:Nx,1), aS_stg_u(:,2:Nx,1), aW_stg_u(:,2:Nx,1), u_star(:,2:Nx,1), b3D_u(:,2:Nx,1))
+            
+            ! CALL ADI_3D_SOLVR_MAIN(res_tol_vel, max_it_ADI_vel, aP_stg_v(2:Ny,:,:), aN_stg_v(2:Ny,:,:), &
+            !                        aE_stg_v(2:Ny,:,:), aS_stg_v(2:Ny,:,:), aW_stg_v(2:Ny,:,:), aB_stg_v(2:Ny,:,:), &
+            !                        aT_stg_v(2:Ny,:,:), v_star(2:Ny,:,:), b3D_v(2:Ny,:,:))
 
             PRINT *, 'Solving v momentum...'
             CALL ADI_2D_SCLRSOLVR_MAIN(res_tol_vel, max_it_ADI_vel, aP_stg_v(2:Ny,:,1), aN_stg_v(2:Ny,:,1), &
                                    aE_stg_v(2:Ny,:,1), aS_stg_v(2:Ny,:,1), aW_stg_v(2:Ny,:,1), v_star(2:Ny,:,1), b3D_v(2:Ny,:,1))
+            
+            ! CALL ADI_3D_SOLVR_MAIN(res_tol_vel, max_it_ADI_vel, aP_stg_w(:,:,2:Nz), aN_stg_w(:,:,2:Nz), &
+            !                         aE_stg_w(:,:,2:Nz), aS_stg_w(:,:,2:Nz), aW_stg_w(:,:,2:Nz), aB_stg_w(:,:,2:Nz), &
+            !                         aT_stg_w(:,:,2:Nz), w_star(:,:,2:Nz), b3D_w(:,:,2:Nz))
+            DO l = 1,Ny
+                DO m = 1,Nx+1
+                    DO n = 1,Nz
+                        IF ((Nx_int_start .LE. m .AND. m .LE. Nx_int_end) .AND. (Ny_int_start .LE. l .AND. l .LE. Ny_int_end)) THEN
+                            u(l,m,n) = 0
+                        END IF
+                    END DO
+                END DO
+            END DO
+
+            DO l = 1,Ny+1
+                DO m = 1,Nx
+                    DO n = 1,Nz
+                        IF ((Nx_int_start .LE. m .AND. m .LE. Nx_int_end) .AND. (Ny_int_start .LE. l .AND. l .LE. Ny_int_end)) THEN
+                            v(l,m,n) = 0
+                        END IF
+                    END DO
+                END DO
+            END DO
                    
             !solve pressure correction equations
             CALL PRESS_CRCTR_COEFFS_BLDR(Nx, Ny, Nz, params, del_x, del_y, del_z, &
@@ -277,6 +361,12 @@ PROGRAM MAIN
             PRINT *, 'Solving pressure correction...'
             CALL ADI_2D_SCLRSOLVR_MAIN(res_tol_p, max_it_ADI_p, aP_ndl(:,:,1), aN_ndl(:,:,1), aE_ndl(:,:,1), aS_ndl(:,:,1), &
                                       aW_ndl(:,:,1), p_prime(:,:,1), b3D_prime(:,:,1))
+
+            
+
+
+            ! CALL ADI_3D_SOLVR_MAIN(res_tol_p, max_it_ADI_p, &
+            !                        aP_ndl, aN_ndl, aE_ndl, aS_ndl, aW_ndl, aB_ndl, aT_ndl, p_prime, b3D_prime)
             
             
             out_file_u = TRIM(out_file) // 'u'
@@ -291,6 +381,26 @@ PROGRAM MAIN
             !correct pressure and velocity
             CALL CORRECTER(Nx, Ny, Nz, p, u, v, w, p_star, p_prime, u_star, v_star, w_star, d_u, d_v, d_w, &
                              relax_vel, relax_p)
+
+            DO l = 1,Ny
+                DO m = 1,Nx+1
+                    DO n = 1,Nz
+                        IF ((Nx_int_start .LE. m .AND. m .LE. Nx_int_end) .AND. (Ny_int_start .LE. l .AND. l .LE. Ny_int_end)) THEN
+                            u(l,m,n) = 0
+                        END IF
+                    END DO
+                END DO
+            END DO
+
+            DO l = 1,Ny+1
+                DO m = 1,Nx
+                    DO n = 1,Nz
+                        IF ((Nx_int_start .LE. m .AND. m .LE. Nx_int_end) .AND. (Ny_int_start .LE. l .AND. l .LE. Ny_int_end)) THEN
+                            v(l,m,n) = 0
+                        END IF
+                    END DO
+                END DO
+            END DO
                     
             
         END DO
@@ -313,16 +423,24 @@ PROGRAM MAIN
 
         t = t + dt
 
+        ! solve for energy based on the velocity field
+        ! build energy coefficients
+        CALL ENERGY_COEFFBLDR_INT_GEOMETRY(Nx, Ny, Nz, params, u, v, w, & 
+                                    aP_ndl_energy, aN_ndl_energy, aE_ndl_energy, aS_ndl_energy, aW_ndl_energy, &
+                                    aB_ndl_energy, aT_ndl_energy, b3D_energy, phi3D_energy)
+        ! solve     
+        PRINT *, 'Solving energy...'                                        
+        CALL ADI_3D_SOLVR_MAIN(res_tol_energy, max_it_ADI_energy, &
+                                aP_ndl_energy, aN_ndl_energy, aE_ndl_energy, aS_ndl_energy, aW_ndl_energy, &
+                                aB_ndl_energy, aT_ndl_energy, &
+                                phi3D_energy, b3D_energy)
+
+        ! write out the energy solution
+        out_file_h = TRIM(out_file) // 'h'
+        CALL WRITE2D_OUTPUT_MAIN(BC_N_energy, BC_E_energy, BC_S_energy,&
+                                BC_W_energy, phi3D_energy(:,:,1), out_file_h)
+
     END DO
-
-    ! write out each velocity component
-    IF (cnvrged) THEN
-        PRINT *, 'Solver converged'
-    ELSE
-        PRINT *, 'Solver did not converge'
-    END IF
-
-    ! solve for energy based on the velocity field
 
     ! Write out velocity fields
     out_file_u = TRIM(out_file) // 'u'
@@ -331,6 +449,7 @@ PROGRAM MAIN
     
     CALL WRITE2D_OUTPUT_MAIN(BC_N_u, BC_E_u, BC_S_u, BC_W_u, u(:,2:Nx,1), out_file_u)
     CALL WRITE2D_OUTPUT_MAIN(BC_N_v, BC_E_v, BC_S_v, BC_W_v, v(2:Ny,:,1), out_file_v)
+    !CALL WRITE3D_OUTPUT_MAIN(BC_N_w, BC_E_w, BC_S_w, BC_W_w, BC_B_w, BC_T_w, w(:,:,2:Nz), out_file_w)
 
 
 END PROGRAM MAIN
